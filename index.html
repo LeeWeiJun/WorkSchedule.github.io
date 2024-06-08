@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>排班表</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div style="margin:10px;">
+        <span>要產生班表的月份</span>
+        <input id="month">
+    </div>
+    <div style="margin:10px;">
+        <span>員工人數</span>
+        <input id="emplyee">
+    </div>
+    <div style="margin:10px;">
+        <button id="downloadExcelBtn" onclick="GenerateExcel()">下載!!!!</button>
+    </div>
+
+    <script>
+        function daysInMonth(year, month) {
+            return new Date(year, month, 0).getDate();
+        }
+
+        function GenerateSchedule(employees) {
+            const year = new Date().getFullYear(); // Get the current year
+            const month = document.getElementById('month').value
+            const totalDays = daysInMonth(year, month);
+            const schedule = [];
+
+            for (let day = 1; day <= totalDays; day++) {
+                const date = new Date(year, month - 1, day);
+                const dayOfWeek = date.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+
+                if (dayOfWeek >= 2 && dayOfWeek <= 5) {
+                    // 工作日晚上班
+                    schedule.push({
+                        date: `${year}-${month}-${day}`,
+                        shift: "晚班",
+                        person: employees[day % employees.length] // 按人数轮流排班
+                    });
+                } else { 
+                    // 周末班 & 紅字
+                    schedule.push({
+                        date: `${year}-${month}-${day}`,
+                        shift: "全天",
+                        person: employees[day % employees.length] // 按人数轮流排班
+                    });
+                    // 周六周日 & 紅字 分上下半天班
+                        schedule.push({
+                            date: `${year}-${month}-${day}`,
+                            shift: "上半天",
+                            person: employees[(day + 1) % employees.length] // 按人数轮流排班
+                        });
+
+                        schedule.push({
+                            date: `${year}-${month}-${day}`,
+                            shift: "下半天",
+                            person: employees[(day + 2) % employees.length] // 按人数轮流排班
+                        });               
+                }
+            }
+            return schedule;
+        }
+
+        function GenerateExcel() {
+            var emp = document.getElementById('emplyee').value
+            var month = document.getElementById('month').value
+            
+            if (emp == "") {
+                alert("您沒有輸入人數...")
+                return;
+            }
+            if (month == "") {
+                alert("您沒有輸入月份...")
+                return;
+            }
+
+            const employees = [];
+            let i = 1;
+            while (i <= emp) {
+                employees.push('員工' + i + '號');
+                i++;
+            }
+
+            const schedule = GenerateSchedule(employees);
+
+            const excelData = schedule.map(entry => [entry.date, entry.shift, entry.person]);
+
+            var wb = XLSX.utils.book_new();
+
+            const worksheet = XLSX.utils.aoa_to_sheet([['日期', '班次', '人員'], ...excelData]);
+
+            XLSX.utils.book_append_sheet(wb, worksheet, `${month}月份`);
+
+            XLSX.writeFile(wb, `${month}月份班表.xlsx`);
+        }
+    </script>
+</body>
+</html>
